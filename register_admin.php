@@ -1,61 +1,37 @@
 <?php
-session_start();
 include('db.php');
+session_start();
 
-$role = isset($_GET['role']) ? $_GET['role'] : 'student';
-$error = '';
+$message = '';
+$messageClass = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];  // email for students, username for admins
-    $password = $_POST['password'];
+    $username = $_POST['username'];
+    $email = $_POST['email'];
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-    if ($role === 'admin') {
-        $query = "SELECT * FROM admins WHERE username = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $username);
-    } else {
-        // Using singular table name "student"
-        $query = "SELECT * FROM student WHERE email = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $username);
-    }
+    $stmt = $conn->prepare("INSERT INTO admins (username, email, password) VALUES (?, ?, ?)");
 
-    $stmt->execute();
-    $result = $stmt->get_result();
+    if ($stmt) {
+        $stmt->bind_param("sss", $username, $email, $password);
 
-    if ($result->num_rows === 1) {
-        $user = $result->fetch_assoc();
-
-        if ($role === 'admin') {
-            if (password_verify($password, $user['password'])) {
-                $_SESSION['username'] = $username;
-                $_SESSION['role'] = 'admin';
-                header('Location: dashboard.php');
-                exit;
-            } else {
-                $error = "Invalid password";
-            }
+        if ($stmt->execute()) {
+            header('Location: login.php?role=admin');
+            exit;
         } else {
-            if (password_verify($password, $user['password'])) {
-                $_SESSION['username'] = $user['email'];
-                $_SESSION['role'] = 'student';
-                header('Location: student_page.php');
-                exit;
-            } else {
-                $error = "Invalid password";
-            }
+            $message = "Error executing query: " . $stmt->error;
+            $messageClass = "error";
         }
     } else {
-        $error = "Invalid login credentials";
+        $message = "Error preparing statement: " . $conn->error;
+        $messageClass = "error";
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title><?php echo ucfirst($role); ?> Login</title>
     <style>
         * {
             box-sizing: border-box;
@@ -72,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #fff;
             padding: 20px;
         }
-        .login-container {
+        .register-container {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
@@ -89,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             text-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
         input[type="text"],
+        input[type="email"],
         input[type="password"] {
             width: 100%;
             padding: 12px 15px;
@@ -127,10 +104,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             transform: translateY(-3px);
             box-shadow: 0 8px 30px rgba(37, 117, 252, 0.6);
         }
-        .error-msg {
-            color: #ff6b6b;
+        .message {
             margin-bottom: 15px;
             font-weight: 600;
+            font-size: 1rem;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .success {
+            color: #4caf50;
         }
         a.back-link {
             display: inline-block;
@@ -144,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             color: #fff;
         }
         @media (max-width: 400px) {
-            .login-container {
+            .register-container {
                 width: 90%;
                 padding: 30px 25px;
             }
@@ -152,17 +135,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <h2><?php echo ucfirst($role); ?> Login</h2>
-        <?php if (!empty($error)) { ?>
-            <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
-        <?php } ?>
-        <form method="post" autocomplete="off">
-            <input type="text" name="username" placeholder="<?php echo ($role == 'admin') ? 'Username' : 'Email'; ?>" required autofocus />
-            <input type="password" name="password" placeholder="Password" required />
-            <button type="submit">Login</button>
-        </form>
-        <a href="index.php" class="back-link">Back to main page</a>
-    </div>
+
+<div class="register-container">
+    <h2>Register Admin</h2>
+
+    <?php if ($message): ?>
+        <div class="message <?= $messageClass ?>"><?= htmlspecialchars($message) ?></div>
+    <?php endif; ?>
+
+    <form method="post" action="">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Register</button>
+    </form>
+
+    <a href="login.php?role=admin" class="back-link">Go to Admin Login</a>
+</div>
+
 </body>
 </html>

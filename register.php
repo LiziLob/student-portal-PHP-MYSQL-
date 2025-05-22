@@ -6,12 +6,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST['email'];
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
 
-    
     $stmt = $conn->prepare("INSERT INTO student (name, email, password) VALUES (?, ?, ?)");
     $stmt->bind_param("sss", $name, $email, $password);
 
     if ($stmt->execute()) {
-        $success = "Registered successfully. <a href='login.php?role=student'>Login</a>";
+        header("Location: login.php?role=student");
+        exit();
     } else {
         $error = "Registration failed. Please try again.";
     }

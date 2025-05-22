@@ -77,9 +77,10 @@
     <div>
         <h1>Welcome to the Student Portal</h1>
         <p>
-            <a href="login.php?role=student">Student Login</a> | 
-            <a href="login.php?role=admin">Admin Login</a> | 
-            <a href="register.php">Register</a>
+            <a href="login.php?role=student">Student Login</a> 
+            <a href="login.php?role=admin">Admin Login</a> 
+            <a href="register.php">Register as Student</a> 
+            <a href="register_admin.php">Register as Admin</a>
         </p>
     </div>
 </body>
