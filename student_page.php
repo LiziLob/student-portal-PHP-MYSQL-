@@ -79,11 +79,31 @@ $coursesResult = $stmt2->get_result();
         .logout {
             float: right;
             margin-top: -40px;
+            color: red;
         }
         .logout a {
             text-decoration: none;
-            color: #c0392b;
+            color: red;
             font-weight: bold;
+        }
+        a.profile-link {
+            color: #2980b9;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        a.profile-link:hover {
+            text-decoration: underline;
+        }
+        .links {
+            margin-bottom: 20px;
+        }
+        .profile-photo {
+            max-width: 150px;
+            max-height: 150px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            object-fit: cover;
+            border: 2px solid #2980b9;
         }
     </style>
 </head>
@@ -92,10 +112,21 @@ $coursesResult = $stmt2->get_result();
     <h1>Welcome, <?php echo htmlspecialchars($student['name']); ?></h1>
     <div class="logout"><a href="logout.php">Logout</a></div>
 
+    <div class="links">
+        <a href="edit_profile.php" class="profile-link">Edit Profile</a> | 
+        <a href="change_password.php" class="profile-link">Change Password</a>
+    </div>
+
+    <?php if (!empty($student['photo']) && file_exists('uploads/' . $student['photo'])): ?>
+        <img src="<?php echo 'uploads/' . htmlspecialchars($student['photo']); ?>" alt="Profile Photo" class="profile-photo" />
+    <?php else: ?>
+        <p><em>No profile photo uploaded.</em></p>
+    <?php endif; ?>
+
     <h2>Your Information</h2>
+    <p><strong>Name:</strong> <?php echo htmlspecialchars($student['name']); ?></p>
     <p><strong>Email:</strong> <?php echo htmlspecialchars($student['email']); ?></p>
-    <p><strong>Phone:</strong> <?php echo htmlspecialchars($student['phone'] ?? 'N/A'); ?></p>
-    <p><strong>Address:</strong> <?php echo htmlspecialchars($student['address'] ?? 'N/A'); ?></p>
+    <p><strong>Role:</strong> User</p>
 
     <h2>Your Enrolled Courses and Grades</h2>
     <?php if ($coursesResult->num_rows > 0): ?>
