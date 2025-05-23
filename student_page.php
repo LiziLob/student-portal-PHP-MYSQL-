@@ -110,15 +110,20 @@ $coursesResult = $stmt2->get_result();
 <body>
 <div class="container">
     <h1>Welcome, <?php echo htmlspecialchars($student['name']); ?></h1>
+    <!-- Greeting the logged-in student, escaping the name for security -->
+
     <div class="logout"><a href="logout.php">Logout</a></div>
+    <!-- Logout link for the user -->
 
     <div class="links">
         <a href="edit_profile.php" class="profile-link">Edit Profile</a> | 
         <a href="change_password.php" class="profile-link">Change Password</a>
     </div>
+    <!-- Links to profile editing and password change pages -->
 
     <?php if (!empty($student['photo']) && file_exists('uploads/' . $student['photo'])): ?>
         <img src="<?php echo 'uploads/' . htmlspecialchars($student['photo']); ?>" alt="Profile Photo" class="profile-photo" />
+        <!-- Display user's profile photo if it exists in the uploads folder -->
     <?php else: ?>
         <p><em>No profile photo uploaded.</em></p>
     <?php endif; ?>
@@ -127,6 +132,7 @@ $coursesResult = $stmt2->get_result();
     <p><strong>Name:</strong> <?php echo htmlspecialchars($student['name']); ?></p>
     <p><strong>Email:</strong> <?php echo htmlspecialchars($student['email']); ?></p>
     <p><strong>Role:</strong> User</p>
+    <!-- Display student's basic information with escaped output -->
 
     <h2>Your Enrolled Courses and Grades</h2>
     <?php if ($coursesResult->num_rows > 0): ?>
@@ -150,8 +156,10 @@ $coursesResult = $stmt2->get_result();
                 <?php endwhile; ?>
             </tbody>
         </table>
+        <!-- Display a table of courses the student is enrolled in, with grades -->
     <?php else: ?>
         <p>You are not enrolled in any courses yet.</p>
+        <!-- Message if no courses found -->
     <?php endif; ?>
 </div>
 </body>

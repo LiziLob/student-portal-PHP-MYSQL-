@@ -159,30 +159,39 @@ $stmt->close();
     <h1>Edit Profile</h1>
 
     <?php if ($message): ?>
+        <!-- Display message if set; apply "error" class only if message contains "Error" or "Failed" -->
         <p class="message <?php echo (strpos($message, 'Error') === false && strpos($message, 'Failed') === false) ? '' : 'error'; ?>">
             <?php echo htmlspecialchars($message); ?>
         </p>
     <?php endif; ?>
 
+    <!-- Profile update form -->
     <form method="post" action="edit_profile.php" enctype="multipart/form-data">
+        <!-- Name input (required) -->
         <label for="name">Name:</label>
         <input type="text" name="name" id="name" required value="<?php echo htmlspecialchars($student['name']); ?>" />
 
+        <!-- Email input (read-only, cannot be changed) -->
         <label for="email">Email (cannot be changed):</label>
         <input type="email" name="email" id="email" readonly value="<?php echo htmlspecialchars($student['email']); ?>" />
 
+        <!-- File upload for profile photo (accepts JPG, PNG, GIF only) -->
         <label for="photo">Upload Photo (JPG, PNG, GIF):</label>
         <input type="file" name="photo" id="photo" accept="image/jpeg,image/png,image/gif" />
 
         <?php if (!empty($student['photo']) && file_exists('uploads/' . $student['photo'])): ?>
+            <!-- Show current uploaded photo if it exists -->
             <img src="<?php echo 'uploads/' . htmlspecialchars($student['photo']); ?>" alt="Your photo" class="photo-preview" />
         <?php else: ?>
+            <!-- Show message if no photo uploaded -->
             <p>No photo uploaded.</p>
         <?php endif; ?>
 
+        <!-- Submit button to update profile -->
         <button type="submit">Update Profile</button>
     </form>
 
+    <!-- Link to go back to student dashboard -->
     <p><a href="student_page.php">Back to Dashboard</a></p>
 </div>
 </body>

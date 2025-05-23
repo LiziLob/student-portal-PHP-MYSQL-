@@ -194,11 +194,13 @@ $enrollments = $conn->query("
 <h1>Admin Dashboard</h1>
 <div class="logout"><a href="logout.php">Logout</a></div>
 
+<!-- Form to assign student to a course and give a grade -->
 <h2>Add Student to Course + Grade</h2>
 <form method="POST" action="dashboard.php">
     <label for="student_id">Student:</label>
     <select name="student_id" required>
         <?php
+        // Populate student dropdown from DB
         $studentOptions = $conn->query("SELECT id, name FROM student");
         while ($s = $studentOptions->fetch_assoc()):
         ?>
@@ -209,6 +211,7 @@ $enrollments = $conn->query("
     <label for="course_id">Course:</label>
     <select name="course_id" required>
         <?php
+        // Populate course dropdown from DB
         $courseOptions = $conn->query("SELECT id, name FROM course");
         while ($c = $courseOptions->fetch_assoc()):
         ?>
@@ -221,12 +224,14 @@ $enrollments = $conn->query("
     <button type="submit">Assign</button>
 </form>
 
+<!-- Form to add a new course -->
 <h2>Add New Course</h2>
 <form action="dashboard.php" method="POST">
     <input type="text" name="new_course_name" required placeholder="Enter course name..." />
     <button type="submit">Add Course</button>
 </form>
 
+<!-- Table displaying all registered students -->
 <h2>Registered Students</h2>
 <table>
     <thead>
@@ -245,6 +250,7 @@ $enrollments = $conn->query("
     </tbody>
 </table>
 
+<!-- Table of courses with delete option -->
 <h2>Courses</h2>
 <table>
     <thead>
@@ -254,6 +260,7 @@ $enrollments = $conn->query("
     </thead>
     <tbody>
         <?php
+        // List all courses and show delete button
         $courseTable = $conn->query("SELECT id, name FROM course");
         while ($row = $courseTable->fetch_assoc()):
         ?>
@@ -261,6 +268,7 @@ $enrollments = $conn->query("
             <td><?= htmlspecialchars($row['id']) ?></td>
             <td><?= htmlspecialchars($row['name']) ?></td>
             <td>
+                <!-- Delete course form with confirmation -->
                 <form method="POST" action="dashboard.php" onsubmit="return confirm('Are you sure you want to delete this course?');" style="display:inline;">
                     <input type="hidden" name="delete_course_id" value="<?= $row['id'] ?>">
                     <button type="submit" class="delete-btn">Delete</button>
@@ -271,6 +279,7 @@ $enrollments = $conn->query("
     </tbody>
 </table>
 
+<!-- Table showing student enrollments and grades -->
 <h2>Enrollments and Grades</h2>
 <table>
     <thead>

@@ -1,19 +1,33 @@
 <?php
-require 'db.php';
+require 'db.php'; 
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
+if ($_SERVER["REQUEST_METHOD"] == "POST") { 
+    // Check if form is submitted via POST
 
-    $stmt = $conn->prepare("INSERT INTO student (name, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $name, $email, $password);
+    $name = $_POST['name']; 
+    // Get the student's name from POST data
 
-    if ($stmt->execute()) {
-        header("Location: login.php?role=student");
-        exit();
+    $email = $_POST['email']; 
+    // Get the student's email from POST data
+
+    $password = password_hash($_POST['password'], PASSWORD_BCRYPT); 
+    // Hash the password securely using BCRYPT
+
+    $stmt = $conn->prepare("INSERT INTO student (name, email, password) VALUES (?, ?, ?)"); 
+    // Prepare an SQL statement to insert new student data
+
+    $stmt->bind_param("sss", $name, $email, $password); 
+    // Bind the parameters to the SQL query as strings
+
+    if ($stmt->execute()) { 
+        // Execute the query, check if successful
+
+        header("Location: login.php?role=student"); 
+        exit(); 
+        // Redirect to student login page after successful registration
     } else {
-        $error = "Registration failed. Please try again.";
+        $error = "Registration failed. Please try again."; 
+        // Set error message if insertion fails
     }
 }
 ?>
@@ -133,17 +147,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <?php if (!empty($error)): ?>
             <div class="message error"><?php echo htmlspecialchars($error); ?></div>
+            <!-- Display error message safely if $error is set -->
         <?php elseif (!empty($success)): ?>
             <div class="message success"><?php echo $success; ?></div>
+            <!-- Display success message if $success is set -->
         <?php endif; ?>
 
         <form method="post" autocomplete="off">
             <input type="text" name="name" placeholder="Name" required autofocus />
+            <!-- Input for user's name, required, autofocus on page load -->
+
             <input type="email" name="email" placeholder="Email" required />
+            <!-- Input for user's email, required and email validation -->
+
             <input type="password" name="password" placeholder="Password" required />
+            <!-- Input for user's password, required -->
+
             <button type="submit">Register</button>
         </form>
+
         <a href="index.php" class="back-link">Back to main page</a>
     </div>
 </body>
 </html>
+

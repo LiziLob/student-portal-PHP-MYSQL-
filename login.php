@@ -1,55 +1,78 @@
 <?php
-session_start();
-include('db.php');
+session_start(); 
 
-$role = isset($_GET['role']) ? $_GET['role'] : 'student';
-$error = '';
+include('db.php'); 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'];  // email for students, username for admins
-    $password = $_POST['password'];
+$role = isset($_GET['role']) ? $_GET['role'] : 'student'; 
+// Determine role from URL parameter, default to 'student'
+
+$error = ''; 
+// Initialize error message variable
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') { 
+
+    $username = $_POST['username'];  
+
+    $password = $_POST['password']; 
 
     if ($role === 'admin') {
         $query = "SELECT * FROM admins WHERE username = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $username);
+        // Prepare and bind parameter for admin username
     } else {
-        // Using singular table name "student"
         $query = "SELECT * FROM student WHERE email = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $username);
+        // Prepare and bind parameter for student email
     }
 
-    $stmt->execute();
-    $result = $stmt->get_result();
+    $stmt->execute(); 
+    // Execute the prepared statement
 
-    if ($result->num_rows === 1) {
-        $user = $result->fetch_assoc();
+    $result = $stmt->get_result(); 
+    // Get the result of the query
+
+    if ($result->num_rows === 1) { 
+        // Check if exactly one matching user found
+
+        $user = $result->fetch_assoc(); 
+        // Fetch user data as associative array
 
         if ($role === 'admin') {
-            if (password_verify($password, $user['password'])) {
+            if (password_verify($password, $user['password'])) { 
+                // Verify admin password hash
+
                 $_SESSION['username'] = $username;
                 $_SESSION['role'] = 'admin';
                 header('Location: dashboard.php');
                 exit;
+                // Set session and redirect to admin dashboard
             } else {
-                $error = "Invalid password";
+                $error = "Invalid password"; 
+                // Password mismatch error for admin
             }
         } else {
-            if (password_verify($password, $user['password'])) {
+            if (password_verify($password, $user['password'])) { 
+                // Verify student password hash
+
                 $_SESSION['username'] = $user['email'];
                 $_SESSION['role'] = 'student';
                 header('Location: student_page.php');
                 exit;
+                // Set session and redirect to student page
             } else {
-                $error = "Invalid password";
+                $error = "Invalid password"; 
+                // Password mismatch error for student
             }
         }
     } else {
-        $error = "Invalid login credentials";
+        $error = "Invalid login credentials"; 
+        // No user found with provided username/email
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -153,15 +176,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
     <div class="login-container">
-        <h2><?php echo ucfirst($role); ?> Login</h2>
+        <h2><?php echo ucfirst($role); ?> Login</h2> 
+        <!-- Displays the role with the first letter capitalized (e.g., Admin Login) -->
+
         <?php if (!empty($error)) { ?>
             <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>
+            <!-- If there is an error message, display it safely -->
         <?php } ?>
+
         <form method="post" autocomplete="off">
             <input type="text" name="username" placeholder="<?php echo ($role == 'admin') ? 'Username' : 'Email'; ?>" required autofocus />
+            <!-- Username input for admin, Email input for other roles -->
+            
             <input type="password" name="password" placeholder="Password" required />
+            <!-- Password input field -->
+
             <button type="submit">Login</button>
+            <!-- Submit button -->
         </form>
+
         <a href="index.php" class="back-link">Back to main page</a>
     </div>
 </body>
