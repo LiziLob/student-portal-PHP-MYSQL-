@@ -2,49 +2,48 @@
 session_start();
 include('db.php');
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+// Ensure only admin can access
+if ($_SESSION['role'] !== 'admin') {
     header("Location: login.php?role=admin");
     exit;
 }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $student_id = intval($_POST['student_id']);
-    $course_id = intval($_POST['course_id']);
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $student_id = (int)$_POST['student_id'];
+    $course_id = (int)$_POST['course_id'];
     $grade = trim($_POST['grade']);
 
-    // Prevent duplicate enrollment
-    $check = $conn->prepare("SELECT * FROM enrollment WHERE student_id = ? AND course_id = ?");
-    $check->bind_param("ii", $student_id, $course_id);
-    $check->execute();
-    $result = $check->get_result();
+    // Enroll student if not already enrolled
+    $stmt = $conn->prepare("SELECT 1 FROM enrollment WHERE student_id = ? AND course_id = ?");
+    $stmt->bind_param("ii", $student_id, $course_id);
+    $stmt->execute();
+    $stmt->store_result();
 
-    if ($result->num_rows === 0) {
-        // Insert into enrollment table
-        $stmt1 = $conn->prepare("INSERT INTO enrollment (student_id, course_id) VALUES (?, ?)");
-        $stmt1->bind_param("ii", $student_id, $course_id);
-        $stmt1->execute();
+    if ($stmt->num_rows === 0) {
+        $enroll = $conn->prepare("INSERT INTO enrollment (student_id, course_id) VALUES (?, ?)");
+        $enroll->bind_param("ii", $student_id, $course_id);
+        $enroll->execute();
+        $enroll->close();
     }
-    // Check if a grade record already exists for this student-course pair
-    $checkGrade = $conn->prepare("SELECT * FROM grades WHERE student_id = ? AND course_id = ?");
-    $checkGrade->bind_param("ii", $student_id, $course_id);  // bind student & course IDs as integers
-    $checkGrade->execute();                                   // execute the SELECT query
-    $resultGrade = $checkGrade->get_result();               
+    $stmt->close();
 
-    if ($resultGrade->num_rows > 0) {
-        // If a grade exists, update it
-        $update = $conn->prepare(
-            "UPDATE grades SET grade = ? WHERE student_id = ? AND course_id = ?"
-        );
-        $update->bind_param("sii", $grade, $student_id, $course_id); // bind new grade (string) and IDs (integers)
-        $update->execute();                                          
+    // Insert or update grade
+    $stmt = $conn->prepare("SELECT 1 FROM grades WHERE student_id = ? AND course_id = ?");
+    $stmt->bind_param("ii", $student_id, $course_id);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $query = "UPDATE grades SET grade = ? WHERE student_id = ? AND course_id = ?";
     } else {
-        // If no grade exists, insert a new record
-        $insert = $conn->prepare(
-            "INSERT INTO grades (student_id, course_id, grade) VALUES (?, ?, ?)"
-        );
-        $insert->bind_param("iis", $student_id, $course_id, $grade); // bind IDs (integers) and grade (string)
-        $insert->execute();                                          
+        $query = "INSERT INTO grades (grade, student_id, course_id) VALUES (?, ?, ?)";
     }
+    $stmt->close();
+
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("sii", $grade, $student_id, $course_id);
+    $stmt->execute();
+    $stmt->close();
 
     header("Location: dashboard.php");
     exit;

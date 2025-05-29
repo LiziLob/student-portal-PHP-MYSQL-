@@ -8,77 +8,77 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'student') {
 }
 
 $studentEmail = $_SESSION['username'];
+$message = '';
 
-// Fetch current student info, including photo
+
 $stmt = $conn->prepare("SELECT id, name, email, photo FROM student WHERE email = ?");
 $stmt->bind_param("s", $studentEmail);
 $stmt->execute();
 $result = $stmt->get_result();
+$student = $result->fetch_assoc();
+$stmt->close();
 
-if ($result->num_rows !== 1) {
-    echo "Student not found.";
-    exit;
+if (!$student) {
+    die("Student not found.");
 }
 
-$student = $result->fetch_assoc();
+
 $studentId = $student['id'];
 
-$message = '';
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $newName = trim($_POST['name'] ?? '');
+    $newName = trim($_POST['name']);
+    $photoPath = $student['photo'];
 
-    if (empty($newName)) {
+    if ($newName === '') {
         $message = "Name cannot be empty.";
     } else {
-        // Handle photo upload if a file was sent
-        if (isset($_FILES['photo']) && $_FILES['photo']['error'] !== UPLOAD_ERR_NO_FILE) {
+        // Handle photo upload if provided
+        if (!empty($_FILES['photo']['name'])) {
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-            if (in_array($_FILES['photo']['type'], $allowedTypes)) {
-                $uploadDir = 'uploads/';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
+            $fileType = $_FILES['photo']['type'];
 
-                // Create unique filename
+            if (in_array($fileType, $allowedTypes)) {
+                $uploadDir = 'uploads/';
+                if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+
                 $ext = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
                 $newFileName = uniqid('photo_', true) . '.' . $ext;
-                $uploadFile = $uploadDir . $newFileName;
+                $uploadPath = $uploadDir . $newFileName;
 
-                if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadFile)) {
-                    // Delete old photo if exists
-                    if (!empty($student['photo']) && file_exists($uploadDir . $student['photo'])) {
-                        unlink($uploadDir . $student['photo']);
+                if (move_uploaded_file($_FILES['photo']['tmp_name'], $uploadPath)) {
+                    if ($photoPath && file_exists($uploadDir . $photoPath)) {
+                        unlink($uploadDir . $photoPath);
                     }
-                    $photoPath = $newFileName;  // store only filename in DB
+                    $photoPath = $newFileName;
                 } else {
                     $message = "Failed to upload photo.";
                 }
             } else {
-                $message = "Only JPG, PNG and GIF files are allowed.";
+                $message = "Only JPG, PNG, and GIF files are allowed.";
             }
-        } else {
-            // No new photo uploaded, keep old filename
-            $photoPath = $student['photo'];
         }
+        // Update only if no error
+        if (!$message) {
+            $update = $conn->prepare("UPDATE student SET name = ?, photo = ? WHERE id = ?");
+            $update->bind_param("ssi", $newName, $photoPath, $studentId);
 
-        // Update DB only if no errors so far
-        if (empty($message)) {
-            $updateStmt = $conn->prepare("UPDATE student SET name = ?, photo = ? WHERE id = ?");
-            $updateStmt->bind_param("ssi", $newName, $photoPath, $studentId);
-            if ($updateStmt->execute()) {
+            if ($update->execute()) {
                 $message = "Profile updated successfully.";
                 $student['name'] = $newName;
                 $student['photo'] = $photoPath;
             } else {
                 $message = "Error updating profile.";
             }
-            $updateStmt->close();
+
+            $update->close();
         }
     }
 }
 
-$stmt->close();
+
 ?>
 
 <!DOCTYPE html>
@@ -88,111 +88,82 @@ $stmt->close();
     <title>Edit Profile</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f9f9f9;
+            font-family: Arial;
+            background: #f0f0f0;
             padding: 20px;
-            color: #333;
         }
         .container {
-            max-width: 600px;
-            margin: 0 auto;
+            max-width: 500px;
             background: white;
-            padding: 25px;
+            padding: 20px;
+            margin: auto;
             border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-        }
-        label {
-            display: block;
-            margin: 15px 0 5px;
+            box-shadow: 0 0 10px #ccc;
         }
         input[type="text"], input[type="email"], input[type="file"] {
             width: 100%;
             padding: 8px;
-            font-size: 16px;
-            box-sizing: border-box;
+            margin: 8px 0;
         }
         input[readonly] {
             background: #eee;
         }
         button {
-            margin-top: 20px;
             background: #2980b9;
             color: white;
             border: none;
-            padding: 10px 18px;
-            font-size: 16px;
-            border-radius: 4px;
+            padding: 10px;
+            width: 100%;
             cursor: pointer;
         }
         .message {
-            margin-top: 15px;
+            margin-top: 10px;
             font-weight: bold;
             color: green;
         }
         .error {
             color: red;
         }
-        a {
-            display: inline-block;
-            margin-top: 15px;
-            text-decoration: none;
-            color: #2980b9;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .photo-preview {
+        img {
             margin-top: 10px;
-            max-width: 150px;
-            max-height: 150px;
-            border-radius: 50%;
+            width: 120px;
+            height: 120px;
             object-fit: cover;
+            border-radius: 50%;
             border: 1px solid #ccc;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>Edit Profile</h1>
+    <h2>Edit Profile</h2>
 
     <?php if ($message): ?>
-        <!-- Display message if set; apply "error" class only if message contains "Error" or "Failed" -->
         <p class="message <?php echo (strpos($message, 'Error') === false && strpos($message, 'Failed') === false) ? '' : 'error'; ?>">
             <?php echo htmlspecialchars($message); ?>
         </p>
     <?php endif; ?>
 
-    <!-- Profile update form -->
-    <form method="post" action="edit_profile.php" enctype="multipart/form-data">
-        <!-- Name input (required) -->
-        <label for="name">Name:</label>
-        <input type="text" name="name" id="name" required value="<?php echo htmlspecialchars($student['name']); ?>" />
+    <form method="post" enctype="multipart/form-data">
+        <label>Name:</label>
+        <input type="text" name="name" required value="<?php echo htmlspecialchars($student['name']); ?>">
 
-        <!-- Email input (read-only, cannot be changed) -->
-        <label for="email">Email (cannot be changed):</label>
-        <input type="email" name="email" id="email" readonly value="<?php echo htmlspecialchars($student['email']); ?>" />
+        <label>Email:</label>
+        <input type="email" value="<?php echo htmlspecialchars($student['email']); ?>" readonly>
 
-        <!-- File upload for profile photo (accepts JPG, PNG, GIF only) -->
-        <label for="photo">Upload Photo (JPG, PNG, GIF):</label>
-        <input type="file" name="photo" id="photo" accept="image/jpeg,image/png,image/gif" />
+        <label>Upload Photo:</label>
+        <input type="file" name="photo" accept="image/*">
 
         <?php if (!empty($student['photo']) && file_exists('uploads/' . $student['photo'])): ?>
-            <!-- Show current uploaded photo if it exists -->
-            <img src="<?php echo 'uploads/' . htmlspecialchars($student['photo']); ?>" alt="Your photo" class="photo-preview" />
+            <img src="uploads/<?php echo htmlspecialchars($student['photo']); ?>" alt="Photo">
         <?php else: ?>
-            <!-- Show message if no photo uploaded -->
             <p>No photo uploaded.</p>
         <?php endif; ?>
 
-        <!-- Submit button to update profile -->
         <button type="submit">Update Profile</button>
     </form>
 
-    <!-- Link to go back to student dashboard -->
-    <p><a href="student_page.php">Back to Dashboard</a></p>
+    <p><a href="student_page.php">← Back to Dashboard</a></p>
 </div>
 </body>
 </html>

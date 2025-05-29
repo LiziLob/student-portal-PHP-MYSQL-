@@ -1,130 +1,81 @@
 <?php
-session_start(); // Start the session
-include('db.php'); // Include database connection
+session_start();
+include('db.php');
 
-// Check if user is logged in and has 'student' role
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'student') {
-    header('Location: login.php?role=student'); // Redirect to login if not authorized
+    header('Location: login.php?role=student');
     exit;
 }
 
-$studentEmail = $_SESSION['username']; // Get student email from session
-$errors = []; // Array to store error messages
-$success = ''; // Success message
+$email = $_SESSION['username'];
+$errors = [];
+$success = "";
 
-// Check if form is submitted
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Retrieve submitted form data
-    $currentPassword = $_POST['current_password'] ?? '';
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
+    $current = $_POST['current_password'] ?? '';
+    $new = $_POST['new_password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
 
-    // Validate password length
-    if (strlen($newPassword) < 6) {
-        $errors[] = "New password must be at least 6 characters long.";
-    }
+    if (strlen($new) < 6) $errors[] = "Password must be at least 6 characters.";
+    if ($new !== $confirm) $errors[] = "New passwords do not match.";
 
-    // Validate if new password and confirmation match
-    if ($newPassword !== $confirmPassword) {
-        $errors[] = "New password and confirmation do not match.";
-    }
-
-    // If no validation errors, proceed to password update
-    if (empty($errors)) {
-        // Fetch the current password hash from the database
+    if (!$errors) {
         $stmt = $conn->prepare("SELECT password FROM student WHERE email = ?");
-        $stmt->bind_param("s", $studentEmail);
+        $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
 
-        // Check if user exists
-        if ($result->num_rows !== 1) {
-            $errors[] = "User not found.";
-        } else {
-            $user = $result->fetch_assoc();
-
-            // Verify current password using password_verify
-            if (!password_verify($currentPassword, $user['password'])) {
+        if ($row = $result->fetch_assoc()) {
+            if (!password_verify($current, $row['password'])) {
                 $errors[] = "Current password is incorrect.";
             } else {
-                // Hash the new password
-                $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
-                // Prepare update statement
-                $updateStmt = $conn->prepare("UPDATE student SET password = ? WHERE email = ?");
-                $updateStmt->bind_param("ss", $newPasswordHash, $studentEmail);
-
-                // Execute update and check result
-                if ($updateStmt->execute()) {
-                    $success = "Password changed successfully.";
-                } else {
-                    $errors[] = "Failed to update password. Please try again.";
-                }
+                $newHash = password_hash($new, PASSWORD_DEFAULT);
+                $update = $conn->prepare("UPDATE student SET password = ? WHERE email = ?");
+                $update->bind_param("ss", $newHash, $email);
+                if ($update->execute()) $success = "Password changed successfully.";
+                else $errors[] = "Error updating password.";
             }
+        } else {
+            $errors[] = "User not found.";
         }
     }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8" />
     <title>Change Password</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
-        .container { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
-        input[type=password] {
-            width: 100%; padding: 10px; margin: 8px 0; box-sizing: border-box;
-            border: 1px solid #ccc; border-radius: 4px;
-        }
-        button {
-            background-color: #2980b9; color: white; padding: 10px 20px;
-            border: none; border-radius: 4px; cursor: pointer;
-        }
-        button:hover {
-            background-color: #1f6391;
-        }
+        body { font-family: Arial; background: #f9f9f9; padding: 20px; }
+        .container { max-width: 500px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 4px; }
+        button { background: #2980b9; color: white; border: none; }
+        button:hover { background: #1f6391; }
         .error { color: red; }
         .success { color: green; }
-        a { text-decoration: none; color: #2980b9; }
-        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>Change Password</h2>
 
-    <!-- Display errors if any -->
     <?php if ($errors): ?>
-        <div class="error">
-            <ul>
-                <?php foreach ($errors as $error): ?>
-                    <li><?php echo htmlspecialchars($error); ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
+        <div class="error"><ul><?php foreach ($errors as $e) echo "<li>" . htmlspecialchars($e) . "</li>"; ?></ul></div>
     <?php endif; ?>
 
-    <!-- Display success message if password changed -->
     <?php if ($success): ?>
-        <p class="success"><?php echo htmlspecialchars($success); ?></p>
+        <p class="success"><?= htmlspecialchars($success) ?></p>
     <?php endif; ?>
 
-    <!-- Password change form -->
-    <form method="post" action="">
-        <label for="current_password">Current Password:</label>
-        <input type="password" id="current_password" name="current_password" required />
-
-        <label for="new_password">New Password:</label>
-        <input type="password" id="new_password" name="new_password" required />
-
-        <label for="confirm_password">Confirm New Password:</label>
-        <input type="password" id="confirm_password" name="confirm_password" required />
-
-        <button type="submit">Change Password</button>
+    <form method="post">
+        <input type="password" name="current_password" placeholder="Current Password" required>
+        <input type="password" name="new_password" placeholder="New Password" required>
+        <input type="password" name="confirm_password" placeholder="Confirm New Password" required>
+        <button type="submit">Update Password</button>
     </form>
 
-    <p><a href="student_page.php">Back to Dashboard</a></p>
+    <p><a href="student_page.php">← Back to Student Page</a></p>
 </div>
 </body>
 </html>
